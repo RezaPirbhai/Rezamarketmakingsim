@@ -274,24 +274,31 @@ class MatchingEngine:
         leaderboard.sort(key=lambda x: x['total_pnl'], reverse=True)
         return leaderboard
 
-    def resolve_game(self, true_value_a: float, true_value_b: float) -> dict:
-        """Resolve the game with true values of A and B
+    def resolve_game(self, true_values: dict, starting_cash: float = 10000) -> dict:
+        """Resolve the game with true values for basic markets
 
         Args:
-            true_value_a: The true/final value of asset A
-            true_value_b: The true/final value of asset B
+            true_values: Dictionary of {market_id: true_value} for BASIC markets only
+            starting_cash: The starting cash amount (from game config)
 
         Returns:
             Dictionary with final results including leaderboard and settlement details
         """
-        # Calculate true value of A+B
-        true_value_ab = true_value_a + true_value_b
+        # Calculate all market values (basic + bundles)
+        mark_prices = {}
 
-        mark_prices = {
-            'market_a': true_value_a,
-            'market_b': true_value_b,
-            'market_ab': true_value_ab
-        }
+        # First, add all basic market values
+        for market_id, market in self.markets.items():
+            if market.market_type == "BASIC":
+                if market_id in true_values:
+                    mark_prices[market_id] = true_values[market_id]
+
+        # Then calculate bundle market values
+        for market_id, market in self.markets.items():
+            if market.market_type == "BUNDLE":
+                bundle_value = market.calculate_bundle_value(mark_prices)
+                if bundle_value is not None:
+                    mark_prices[market_id] = bundle_value
 
         # Get final leaderboard with mark-to-market
         final_leaderboard = self.get_leaderboard(mark_prices)
@@ -300,7 +307,6 @@ class MatchingEngine:
         settlements = []
         for player in self.players.values():
             if player.role.value == "PLAYER":
-                starting_cash = 10000  # This should come from game config
                 settlement = {
                     'player_id': player.id,
                     'name': player.name,
@@ -327,6 +333,23 @@ class MatchingEngine:
             'leaderboard': final_leaderboard,
             'settlements': settlements
         }
+
+    def delete_market(self, market_id: str) -> bool:
+        """Delete a market if it has no active orders"""
+        if market_id not in self.markets:
+            return False
+
+        # Check if order book is empty
+        order_book = self.order_books.get(market_id)
+        if order_book and (order_book.bids or order_book.asks):
+            return False  # Cannot delete market with active orders
+
+        # Remove market
+        del self.markets[market_id]
+        if market_id in self.order_books:
+            del self.order_books[market_id]
+
+        return True
 
     def reset_game(self, starting_cash: float):
         """Reset all player positions and cash"""

@@ -15,22 +15,11 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 engine = MatchingEngine()
 connected_users = {}  # session_id -> user_id
 
-# Initialize default markets
-def initialize_markets():
-    markets = [
-        Market(id="market_a", name="Size of A", description="Market for asset A", position_limit=100),
-        Market(id="market_b", name="Size of B", description="Market for asset B", position_limit=100),
-        Market(id="market_ab", name="Size of A+B", description="Bundle market (A+B)", position_limit=100)
-    ]
-    for market in markets:
-        engine.add_market(market)
-
-initialize_markets()
-
 # Game state
 game_config = {
     'starting_cash': 10000,
-    'game_started': False
+    'game_started': False,
+    'max_markets': 10
 }
 
 # HTTP Routes
@@ -185,6 +174,78 @@ def handle_admin_setup(data):
     except Exception as e:
         emit('error', {'message': str(e)})
 
+@socketio.on('admin_create_market')
+def handle_admin_create_market(data):
+    """Admin: Create a new market"""
+    try:
+        user_id = connected_users.get(request.sid)
+        if not user_id or engine.players[user_id].role != UserRole.ADMIN:
+            emit('error', {'message': 'Admin access required'})
+            return
+
+        # Check max markets
+        if len(engine.markets) >= game_config['max_markets']:
+            emit('error', {'message': f'Maximum {game_config["max_markets"]} markets allowed'})
+            return
+
+        market_id = data.get('id')
+        name = data.get('name')
+        description = data.get('description', '')
+        position_limit = int(data.get('position_limit', 100))
+        market_type = data.get('market_type', 'BASIC')
+        bundle_formula = data.get('bundle_formula')
+
+        # Validate
+        if not market_id or not name:
+            emit('error', {'message': 'Market ID and name are required'})
+            return
+
+        if market_id in engine.markets:
+            emit('error', {'message': 'Market ID already exists'})
+            return
+
+        # Create market
+        market = Market(
+            id=market_id,
+            name=name,
+            description=description,
+            position_limit=position_limit,
+            market_type=market_type,
+            bundle_formula=bundle_formula
+        )
+
+        engine.add_market(market)
+
+        socketio.emit('market_created', {
+            'market': market.to_dict(),
+            'message': f'Market "{name}" created successfully'
+        })
+
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
+@socketio.on('admin_delete_market')
+def handle_admin_delete_market(data):
+    """Admin: Delete a market"""
+    try:
+        user_id = connected_users.get(request.sid)
+        if not user_id or engine.players[user_id].role != UserRole.ADMIN:
+            emit('error', {'message': 'Admin access required'})
+            return
+
+        market_id = data.get('market_id')
+
+        if engine.delete_market(market_id):
+            socketio.emit('market_deleted', {
+                'market_id': market_id,
+                'message': f'Market deleted successfully'
+            })
+        else:
+            emit('error', {'message': 'Cannot delete market with active orders or market not found'})
+
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
 @socketio.on('admin_start_game')
 def handle_admin_start_game():
     """Admin: Start the game"""
@@ -192,6 +253,11 @@ def handle_admin_start_game():
         user_id = connected_users.get(request.sid)
         if not user_id or engine.players[user_id].role != UserRole.ADMIN:
             emit('error', {'message': 'Admin access required'})
+            return
+
+        # Check if at least one market exists
+        if len(engine.markets) == 0:
+            emit('error', {'message': 'Create at least one market before starting the game'})
             return
 
         game_config['game_started'] = True
@@ -240,29 +306,46 @@ def handle_admin_reset_game():
 
 @socketio.on('admin_resolve_game')
 def handle_admin_resolve_game(data):
-    """Admin: Resolve the game with true values"""
+    """Admin: Resolve the game with true values for basic markets"""
     try:
         user_id = connected_users.get(request.sid)
         if not user_id or engine.players[user_id].role != UserRole.ADMIN:
             emit('error', {'message': 'Admin access required'})
             return
 
-        true_value_a = float(data.get('true_value_a', 0))
-        true_value_b = float(data.get('true_value_b', 0))
+        true_values = data.get('true_values', {})
 
-        if true_value_a <= 0 or true_value_b <= 0:
-            emit('error', {'message': 'True values must be positive'})
+        # Validate that we have values for all BASIC markets
+        basic_markets = [m for m in engine.markets.values() if m.market_type == "BASIC"]
+
+        if not basic_markets:
+            emit('error', {'message': 'No basic markets exist'})
+            return
+
+        missing_markets = []
+        for market in basic_markets:
+            if market.id not in true_values:
+                missing_markets.append(market.name)
+            elif true_values[market.id] <= 0:
+                emit('error', {'message': f'True value for {market.name} must be positive'})
+                return
+
+        if missing_markets:
+            emit('error', {'message': f'Missing true values for: {", ".join(missing_markets)}'})
             return
 
         # Resolve the game
-        results = engine.resolve_game(true_value_a, true_value_b)
+        results = engine.resolve_game(true_values, game_config['starting_cash'])
 
         # End the game
         game_config['game_started'] = False
 
+        # Create message with true values
+        values_str = ", ".join([f'{engine.markets[mid].name}=${val:.2f}' for mid, val in results['true_values'].items()])
+
         # Broadcast results to all players
         socketio.emit('game_resolved', {
-            'message': f'Game resolved! True values: A=${true_value_a:.2f}, B=${true_value_b:.2f}, A+B=${true_value_a + true_value_b:.2f}',
+            'message': f'Game resolved! True values: {values_str}',
             'results': results
         })
 

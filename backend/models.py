@@ -11,6 +11,15 @@ class UserRole(Enum):
     ADMIN = "ADMIN"
     PLAYER = "PLAYER"
 
+class MarketType(Enum):
+    BASIC = "BASIC"
+    BUNDLE = "BUNDLE"
+
+class BundleOperation(Enum):
+    ADD = "ADD"
+    SUBTRACT = "SUBTRACT"
+    MULTIPLY = "MULTIPLY"
+
 @dataclass
 class Order:
     id: str
@@ -124,13 +133,56 @@ class Market:
     name: str
     description: str
     position_limit: int
+    market_type: str = "BASIC"  # BASIC or BUNDLE
     tick_size: float = 0.01
+    # For bundle markets
+    bundle_formula: Optional[dict] = None  # {"operation": "ADD", "markets": ["market_a", "market_b"]}
+
+    def __post_init__(self):
+        if isinstance(self.market_type, str):
+            self.market_type = self.market_type
+        if self.bundle_formula and isinstance(self.bundle_formula.get('operation'), str):
+            # Keep as string for now
+            pass
+
+    def calculate_bundle_value(self, market_values: dict) -> Optional[float]:
+        """Calculate the value of a bundle market based on component markets"""
+        if self.market_type != "BUNDLE" or not self.bundle_formula:
+            return None
+
+        operation = self.bundle_formula.get('operation')
+        markets = self.bundle_formula.get('markets', [])
+
+        if not all(m in market_values for m in markets):
+            return None
+
+        values = [market_values[m] for m in markets]
+
+        if operation == "ADD":
+            return sum(values)
+        elif operation == "SUBTRACT":
+            # Subtract all subsequent values from the first
+            result = values[0]
+            for v in values[1:]:
+                result -= v
+            return result
+        elif operation == "MULTIPLY":
+            result = 1
+            for v in values:
+                result *= v
+            return result
+
+        return None
 
     def to_dict(self):
-        return {
+        data = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'position_limit': self.position_limit,
+            'market_type': self.market_type,
             'tick_size': self.tick_size
         }
+        if self.bundle_formula:
+            data['bundle_formula'] = self.bundle_formula
+        return data

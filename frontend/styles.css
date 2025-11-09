@@ -131,6 +131,92 @@ body {
     border-radius: 5px;
 }
 
+.market-creation-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #ffc107;
+}
+
+.market-creation-section h4, .markets-list-section h4 {
+    color: #856404;
+    margin-bottom: 0.75rem;
+}
+
+.market-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.market-form input, .market-form select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.bundle-formula-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 5px;
+}
+
+.bundle-formula-section h5 {
+    color: #856404;
+    margin-bottom: 0.5rem;
+}
+
+#bundle-markets-selector {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.bundle-markets-selector label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.markets-list-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #ffc107;
+}
+
+.created-market-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 5px;
+    border-left: 4px solid #667eea;
+}
+
+.created-market-item.bundle {
+    border-left-color: #e74c3c;
+}
+
+.market-info h5 {
+    margin: 0 0 0.25rem 0;
+    color: #667eea;
+}
+
+.market-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.market-actions button {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+}
+
 .resolution-section {
     margin-top: 1.5rem;
     padding-top: 1rem;

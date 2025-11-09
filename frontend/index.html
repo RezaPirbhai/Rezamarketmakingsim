@@ -47,6 +47,39 @@
             <!-- Admin Controls -->
             <div id="admin-controls" class="admin-controls hidden">
                 <h3>Admin Controls</h3>
+
+                <!-- Market Creation Section -->
+                <div class="market-creation-section">
+                    <h4>Create Market</h4>
+                    <div class="market-form">
+                        <input type="text" id="market-id" placeholder="Market ID (e.g., market_a)" />
+                        <input type="text" id="market-name" placeholder="Market Name" />
+                        <input type="text" id="market-description" placeholder="Description" />
+                        <input type="number" id="market-position-limit" placeholder="Position Limit" value="100" />
+                        <select id="market-type">
+                            <option value="BASIC">Basic Market</option>
+                            <option value="BUNDLE">Bundle Market</option>
+                        </select>
+                    </div>
+                    <div id="bundle-formula-section" class="bundle-formula-section hidden">
+                        <h5>Bundle Formula</h5>
+                        <select id="bundle-operation">
+                            <option value="ADD">Addition</option>
+                            <option value="SUBTRACT">Subtraction</option>
+                            <option value="MULTIPLY">Multiplication</option>
+                        </select>
+                        <div id="bundle-markets-selector"></div>
+                    </div>
+                    <button id="create-market-btn" class="btn btn-success">Create Market</button>
+                </div>
+
+                <!-- Markets List -->
+                <div class="markets-list-section">
+                    <h4>Created Markets (<span id="market-count">0</span>/10)</h4>
+                    <div id="created-markets-list"></div>
+                </div>
+
+                <!-- Game Control -->
                 <div class="admin-actions">
                     <input type="number" id="starting-cash-input" placeholder="Starting Cash" value="10000" />
                     <button id="update-config-btn" class="btn btn-admin">Update Config</button>
@@ -54,13 +87,14 @@
                     <button id="end-game-btn" class="btn btn-danger">End Game</button>
                     <button id="reset-game-btn" class="btn btn-warning">Reset Game</button>
                 </div>
+
+                <!-- Resolution Section -->
                 <div class="resolution-section">
-                    <h4>Resolve Game (Set True Values)</h4>
-                    <div class="resolution-inputs">
-                        <input type="number" id="true-value-a" placeholder="True Value of A" step="0.01" />
-                        <input type="number" id="true-value-b" placeholder="True Value of B" step="0.01" />
-                        <button id="resolve-game-btn" class="btn btn-primary">Resolve & Show Final Results</button>
+                    <h4>Resolve Game (Set True Values for Basic Markets)</h4>
+                    <div id="resolution-inputs" class="resolution-inputs">
+                        <!-- Dynamic inputs will be inserted here -->
                     </div>
+                    <button id="resolve-game-btn" class="btn btn-primary">Resolve & Show Final Results</button>
                 </div>
             </div>
 
