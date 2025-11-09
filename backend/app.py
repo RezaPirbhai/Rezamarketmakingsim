@@ -238,6 +238,37 @@ def handle_admin_reset_game():
     except Exception as e:
         emit('error', {'message': str(e)})
 
+@socketio.on('admin_resolve_game')
+def handle_admin_resolve_game(data):
+    """Admin: Resolve the game with true values"""
+    try:
+        user_id = connected_users.get(request.sid)
+        if not user_id or engine.players[user_id].role != UserRole.ADMIN:
+            emit('error', {'message': 'Admin access required'})
+            return
+
+        true_value_a = float(data.get('true_value_a', 0))
+        true_value_b = float(data.get('true_value_b', 0))
+
+        if true_value_a <= 0 or true_value_b <= 0:
+            emit('error', {'message': 'True values must be positive'})
+            return
+
+        # Resolve the game
+        results = engine.resolve_game(true_value_a, true_value_b)
+
+        # End the game
+        game_config['game_started'] = False
+
+        # Broadcast results to all players
+        socketio.emit('game_resolved', {
+            'message': f'Game resolved! True values: A=${true_value_a:.2f}, B=${true_value_b:.2f}, A+B=${true_value_a + true_value_b:.2f}',
+            'results': results
+        })
+
+    except Exception as e:
+        emit('error', {'message': str(e)})
+
 @socketio.on('get_leaderboard')
 def handle_get_leaderboard():
     """Get current leaderboard"""

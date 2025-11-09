@@ -131,6 +131,31 @@ body {
     border-radius: 5px;
 }
 
+.resolution-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid #ffc107;
+}
+
+.resolution-section h4 {
+    color: #856404;
+    margin-bottom: 0.75rem;
+}
+
+.resolution-inputs {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.resolution-inputs input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 180px;
+}
+
 /* Markets Grid */
 .markets-grid {
     display: grid;
@@ -342,7 +367,11 @@ body {
     position: relative;
 }
 
-.close {
+.modal-large {
+    min-width: 800px;
+}
+
+.close, .close-resolution {
     position: absolute;
     right: 1rem;
     top: 1rem;
@@ -351,7 +380,7 @@ body {
     color: #999;
 }
 
-.close:hover {
+.close:hover, .close-resolution:hover {
     color: #333;
 }
 
@@ -375,6 +404,79 @@ body {
 
 .leaderboard-item.rank-3 {
     background: #cd7f32;
+}
+
+/* Settlement Results */
+.true-values {
+    background: #667eea;
+    color: white;
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.true-values h3 {
+    margin-bottom: 0.5rem;
+}
+
+.settlement-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border-left: 4px solid #667eea;
+}
+
+.settlement-item.winner {
+    border-left-color: #27ae60;
+    background: #d4edda;
+}
+
+.settlement-item h4 {
+    color: #667eea;
+    margin-bottom: 1rem;
+}
+
+.settlement-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 5px;
+}
+
+.detail-label {
+    font-weight: 500;
+    color: #666;
+}
+
+.detail-value {
+    font-weight: bold;
+}
+
+.detail-value.positive {
+    color: #27ae60;
+}
+
+.detail-value.negative {
+    color: #e74c3c;
+}
+
+.final-pnl {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
 }
 
 /* Notifications */

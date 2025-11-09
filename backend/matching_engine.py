@@ -243,27 +243,90 @@ class MatchingEngine:
         """Get all order books for display"""
         return [ob.get_order_book_display() for ob in self.order_books.values()]
 
-    def get_leaderboard(self) -> List[dict]:
-        """Calculate leaderboard based on total P&L"""
+    def get_leaderboard(self, mark_prices: dict = None) -> List[dict]:
+        """Calculate leaderboard based on total P&L
+
+        Args:
+            mark_prices: Optional dict of {market_id: price} for mark-to-market valuation
+        """
         leaderboard = []
 
         for player in self.players.values():
             if player.role.value == "PLAYER":  # Exclude admin
                 total_pnl = player.cash
 
-                # Add unrealized P&L from positions (would need mark prices)
-                # For now, just use cash + realized P&L
+                # Add unrealized P&L from positions if mark prices provided
+                if mark_prices:
+                    for market_id, position in player.positions.items():
+                        if market_id in mark_prices:
+                            # Unrealized P&L = position_quantity * mark_price
+                            total_pnl += position.quantity * mark_prices[market_id]
 
                 leaderboard.append({
                     'player_id': player.id,
                     'name': player.name,
                     'cash': player.cash,
+                    'positions': {k: v.to_dict() for k, v in player.positions.items()},
                     'total_pnl': total_pnl
                 })
 
         # Sort by total P&L descending
         leaderboard.sort(key=lambda x: x['total_pnl'], reverse=True)
         return leaderboard
+
+    def resolve_game(self, true_value_a: float, true_value_b: float) -> dict:
+        """Resolve the game with true values of A and B
+
+        Args:
+            true_value_a: The true/final value of asset A
+            true_value_b: The true/final value of asset B
+
+        Returns:
+            Dictionary with final results including leaderboard and settlement details
+        """
+        # Calculate true value of A+B
+        true_value_ab = true_value_a + true_value_b
+
+        mark_prices = {
+            'market_a': true_value_a,
+            'market_b': true_value_b,
+            'market_ab': true_value_ab
+        }
+
+        # Get final leaderboard with mark-to-market
+        final_leaderboard = self.get_leaderboard(mark_prices)
+
+        # Calculate settlement details for each player
+        settlements = []
+        for player in self.players.values():
+            if player.role.value == "PLAYER":
+                starting_cash = 10000  # This should come from game config
+                settlement = {
+                    'player_id': player.id,
+                    'name': player.name,
+                    'starting_cash': starting_cash,
+                    'ending_cash': player.cash,
+                    'positions': {},
+                    'position_values': {},
+                    'total_value': player.cash
+                }
+
+                # Calculate value of each position
+                for market_id, position in player.positions.items():
+                    if market_id in mark_prices:
+                        position_value = position.quantity * mark_prices[market_id]
+                        settlement['positions'][market_id] = position.quantity
+                        settlement['position_values'][market_id] = position_value
+                        settlement['total_value'] += position_value
+
+                settlement['total_pnl'] = settlement['total_value'] - starting_cash
+                settlements.append(settlement)
+
+        return {
+            'true_values': mark_prices,
+            'leaderboard': final_leaderboard,
+            'settlements': settlements
+        }
 
     def reset_game(self, starting_cash: float):
         """Reset all player positions and cash"""

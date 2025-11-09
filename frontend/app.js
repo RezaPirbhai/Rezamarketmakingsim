@@ -25,6 +25,8 @@ const positionsList = document.getElementById('positions-list');
 const leaderboardBtn = document.getElementById('leaderboard-btn');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const leaderboardList = document.getElementById('leaderboard-list');
+const resolutionModal = document.getElementById('resolution-modal');
+const resolutionResults = document.getElementById('resolution-results');
 
 // Event Listeners
 joinBtn.addEventListener('click', handleJoin);
@@ -34,11 +36,16 @@ document.querySelector('.close').addEventListener('click', () => {
     leaderboardModal.classList.add('hidden');
 });
 
+document.querySelector('.close-resolution')?.addEventListener('click', () => {
+    resolutionModal.classList.add('hidden');
+});
+
 // Admin controls
 document.getElementById('update-config-btn')?.addEventListener('click', updateConfig);
 document.getElementById('start-game-btn')?.addEventListener('click', startGame);
 document.getElementById('end-game-btn')?.addEventListener('click', endGame);
 document.getElementById('reset-game-btn')?.addEventListener('click', resetGame);
+document.getElementById('resolve-game-btn')?.addEventListener('click', resolveGame);
 
 // Socket event handlers
 socket.on('connected', (data) => {
@@ -110,6 +117,12 @@ socket.on('game_ended', (data) => {
     showNotification(data.message, 'success');
     displayLeaderboard(data.leaderboard);
     leaderboardModal.classList.remove('hidden');
+});
+
+socket.on('game_resolved', (data) => {
+    showNotification(data.message, 'success');
+    displayResolutionResults(data.results);
+    resolutionModal.classList.remove('hidden');
 });
 
 socket.on('game_reset', (data) => {
@@ -332,6 +345,90 @@ function resetGame() {
     if (confirm('Are you sure you want to reset the game? All positions will be cleared.')) {
         socket.emit('admin_reset_game');
     }
+}
+
+function resolveGame() {
+    const trueValueA = parseFloat(document.getElementById('true-value-a').value);
+    const trueValueB = parseFloat(document.getElementById('true-value-b').value);
+
+    if (!trueValueA || !trueValueB || trueValueA <= 0 || trueValueB <= 0) {
+        showNotification('Please enter valid positive values for A and B', 'error');
+        return;
+    }
+
+    if (confirm(`Resolve game with True Value A=$${trueValueA.toFixed(2)} and B=$${trueValueB.toFixed(2)}?\n\nThis will end the game and calculate final results.`)) {
+        socket.emit('admin_resolve_game', {
+            true_value_a: trueValueA,
+            true_value_b: trueValueB
+        });
+
+        // Clear inputs
+        document.getElementById('true-value-a').value = '';
+        document.getElementById('true-value-b').value = '';
+    }
+}
+
+function displayResolutionResults(results) {
+    const { true_values, leaderboard, settlements } = results;
+
+    let html = `
+        <div class="true-values">
+            <h3>True Values</h3>
+            <p>Market A: $${true_values.market_a.toFixed(2)} | Market B: $${true_values.market_b.toFixed(2)} | Market A+B: $${true_values.market_ab.toFixed(2)}</p>
+        </div>
+
+        <h3>Final Rankings</h3>
+    `;
+
+    // Sort settlements by total_pnl for ranking
+    settlements.sort((a, b) => b.total_pnl - a.total_pnl);
+
+    settlements.forEach((settlement, index) => {
+        const isWinner = index === 0;
+        const pnlClass = settlement.total_pnl >= 0 ? 'positive' : 'negative';
+        const pnlSign = settlement.total_pnl >= 0 ? '+' : '';
+
+        html += `
+            <div class="settlement-item ${isWinner ? 'winner' : ''}">
+                <h4>#${index + 1} ${settlement.name} ${isWinner ? '🏆' : ''}</h4>
+                <div class="settlement-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Starting Cash:</span>
+                        <span class="detail-value">$${settlement.starting_cash.toFixed(2)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Ending Cash:</span>
+                        <span class="detail-value">$${settlement.ending_cash.toFixed(2)}</span>
+                    </div>
+        `;
+
+        // Show positions
+        if (Object.keys(settlement.positions).length > 0) {
+            Object.entries(settlement.positions).forEach(([marketId, qty]) => {
+                const value = settlement.position_values[marketId];
+                html += `
+                    <div class="detail-row">
+                        <span class="detail-label">${marketId} Position:</span>
+                        <span class="detail-value">${qty > 0 ? '+' : ''}${qty}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">${marketId} Value:</span>
+                        <span class="detail-value ${value >= 0 ? 'positive' : 'negative'}">$${value.toFixed(2)}</span>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+                </div>
+                <div class="final-pnl">
+                    Total P&L: <span class="detail-value ${pnlClass}">${pnlSign}$${settlement.total_pnl.toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    resolutionResults.innerHTML = html;
 }
 
 // Make functions global for onclick handlers
