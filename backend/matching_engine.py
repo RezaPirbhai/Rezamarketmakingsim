@@ -277,6 +277,8 @@ class MatchingEngine:
     def resolve_game(self, true_values: dict, starting_cash: float = 10000) -> dict:
         """Resolve the game with true values for basic markets
 
+        This will SETTLE all positions at true values and update player cash.
+
         Args:
             true_values: Dictionary of {market_id: true_value} for BASIC markets only
             starting_cash: The starting cash amount (from game config)
@@ -300,33 +302,57 @@ class MatchingEngine:
                 if bundle_value is not None:
                     mark_prices[market_id] = bundle_value
 
-        # Get final leaderboard with mark-to-market
-        final_leaderboard = self.get_leaderboard(mark_prices)
-
-        # Calculate settlement details for each player
+        # Calculate settlement details and SETTLE positions
         settlements = []
         for player in self.players.values():
             if player.role.value == "PLAYER":
+                # Store position info BEFORE settlement
+                position_info = {}
+                position_values = {}
+                cash_before_settlement = player.cash
+
+                for market_id, position in player.positions.items():
+                    if market_id in mark_prices:
+                        position_info[market_id] = position.quantity
+                        position_values[market_id] = position.quantity * mark_prices[market_id]
+
+                # SETTLE: Close all positions at mark prices
+                for market_id, position in player.positions.items():
+                    if market_id in mark_prices and position.quantity != 0:
+                        # Settlement value = position * mark_price
+                        settlement_value = position.quantity * mark_prices[market_id]
+                        # Add position value to cash
+                        player.cash += settlement_value
+
                 settlement = {
                     'player_id': player.id,
                     'name': player.name,
                     'starting_cash': starting_cash,
-                    'ending_cash': player.cash,
-                    'positions': {},
-                    'position_values': {},
-                    'total_value': player.cash
+                    'ending_cash': player.cash,  # Cash after settling positions
+                    'positions': position_info,
+                    'position_values': position_values,
+                    'total_value': player.cash,  # Final cash = total value
+                    'total_pnl': player.cash - starting_cash  # P&L = final cash - starting cash
                 }
 
-                # Calculate value of each position
-                for market_id, position in player.positions.items():
-                    if market_id in mark_prices:
-                        position_value = position.quantity * mark_prices[market_id]
-                        settlement['positions'][market_id] = position.quantity
-                        settlement['position_values'][market_id] = position_value
-                        settlement['total_value'] += position_value
-
-                settlement['total_pnl'] = settlement['total_value'] - starting_cash
                 settlements.append(settlement)
+
+                # Clear positions after settlement
+                player.positions = {}
+
+        # Get final leaderboard (now based on settled cash)
+        final_leaderboard = []
+        for player in self.players.values():
+            if player.role.value == "PLAYER":
+                final_leaderboard.append({
+                    'player_id': player.id,
+                    'name': player.name,
+                    'cash': player.cash,
+                    'positions': {},
+                    'total_pnl': player.cash - starting_cash
+                })
+
+        final_leaderboard.sort(key=lambda x: x['total_pnl'], reverse=True)
 
         return {
             'true_values': mark_prices,
