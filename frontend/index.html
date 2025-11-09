@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Making Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen">
+            <div class="login-container">
+                <h1>Market Making Simulator</h1>
+                <div class="login-form">
+                    <input type="text" id="username-input" placeholder="Enter your name" />
+                    <div class="role-selector">
+                        <label>
+                            <input type="radio" name="role" value="PLAYER" checked />
+                            Player
+                        </label>
+                        <label>
+                            <input type="radio" name="role" value="ADMIN" />
+                            Admin
+                        </label>
+                    </div>
+                    <button id="join-btn" class="btn btn-primary">Join Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen hidden">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <h1>Market Making Sim</h1>
+                    <div id="user-info"></div>
+                </div>
+                <div class="header-right">
+                    <div id="cash-display" class="cash-display">Cash: $0</div>
+                    <button id="leaderboard-btn" class="btn btn-secondary">Leaderboard</button>
+                </div>
+            </div>
+
+            <!-- Admin Controls -->
+            <div id="admin-controls" class="admin-controls hidden">
+                <h3>Admin Controls</h3>
+                <div class="admin-actions">
+                    <input type="number" id="starting-cash-input" placeholder="Starting Cash" value="10000" />
+                    <button id="update-config-btn" class="btn btn-admin">Update Config</button>
+                    <button id="start-game-btn" class="btn btn-success">Start Game</button>
+                    <button id="end-game-btn" class="btn btn-danger">End Game</button>
+                    <button id="reset-game-btn" class="btn btn-warning">Reset Game</button>
+                </div>
+            </div>
+
+            <!-- Markets Grid -->
+            <div class="markets-grid" id="markets-grid">
+                <!-- Market cards will be inserted here -->
+            </div>
+
+            <!-- Positions Display -->
+            <div class="positions-panel">
+                <h3>Your Positions</h3>
+                <div id="positions-list"></div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Modal -->
+        <div id="leaderboard-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Leaderboard</h2>
+                <div id="leaderboard-list"></div>
+            </div>
+        </div>
+
+        <!-- Trade Notifications -->
+        <div id="notifications"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
